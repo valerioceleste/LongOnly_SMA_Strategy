@@ -1,6 +1,6 @@
 from modules.historical_price import WatchlistGenerator
 from modules.money_management import CapitalManager
-from modules.trade_management import test
+from modules.trade_management import TradeManager
 from modules.risk_management import RiskManager
 
 ################################ INPUT ################################
@@ -36,6 +36,7 @@ Target Saving Capital: {target_saving_capital}
 # HISTORICAL PRICE MODULE - Generate the Watchlist and calculate SMA and ATR
 wl = WatchlistGenerator()
 watchlist = wl.get_watchlist(currency, interval, sma_window, atr_window, loockback, filter)
+watchlist = wl.get_symbol_info(watchlist)
 print(watchlist)
 
 # RISK MANAGEMENT MODULE - Generate the Trade sizing and SL according to defined risk
@@ -43,4 +44,8 @@ rm = RiskManager(watchlist,capital,saving_rate,pct_risk_per_trade,ATR_multiplier
 orderbook = rm.get_order_book()
 print(orderbook)
 
+# TRADE MANAGEMENT MODULE - Execute the trades using data in the orderbook
 
+tm = TradeManager()
+trades_confirmation = tm.place_orders(orderbook)
+print(trades_confirmation)

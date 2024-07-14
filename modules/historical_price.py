@@ -16,6 +16,7 @@ class WatchlistGenerator:
     def __init__(self):  # initialize the client
         self.client = Client(api_key=testnet_api_key, api_secret=testnet_api_secret_key, tld='com', testnet=True)
 
+
     def get_history(self, symbol, interval, start, end=None):
         bars = self.client.get_historical_klines(symbol=symbol, interval=interval,
                                                  start_str=start, end_str=end, limit=1000)
@@ -30,6 +31,7 @@ class WatchlistGenerator:
             df[column] = pd.to_numeric(df[column], errors="coerce")
         return df
 
+
     def fetch_history(self, symbol, interval, start, sma_window, atr_window):
         try:
             data = self.get_history(symbol=symbol, interval=interval, start=str(start))
@@ -41,6 +43,7 @@ class WatchlistGenerator:
             print(f"Error fetching data for {symbol}: {e}")
             return symbol, None
 
+
     def get_historical_close(self, symbols, interval, before_now, sma_window, atr_window):
         fetch_func = partial(self.fetch_history, interval=interval, start=before_now,
                              sma_window=sma_window, atr_window=atr_window)
@@ -49,6 +52,7 @@ class WatchlistGenerator:
             results = executor.map(fetch_func, symbols)
 
         return {symbol: data for symbol, data in results if data is not None}
+
 
     def get_watchlist(self, currency, interval, sma_window, atr_window, lookback, filter):
         span = sma_window + 1
@@ -75,7 +79,7 @@ class WatchlistGenerator:
             data = [{'Asset': key,
                  'Close': historical_data[key]['Close'].iloc[-1],
                  'SMA': historical_data[key]['SMA'].iloc[-2],
-                 'ATR': round(historical_data[key]['ATR'].iloc[-1], 7)}
+                 'ATR': (historical_data[key]['ATR'].iloc[-1], 7)}
                 for key in historical_data.keys()]
             
             df = pd.DataFrame(data, columns=['Asset', 'Close', 'SMA', 'ATR'])
@@ -110,3 +114,28 @@ class WatchlistGenerator:
                 watchlist = df
 
         return watchlist.sort_values(by='delta').reset_index(drop=True)
+
+
+    def get_symbol_info(self, watchlist):
+
+        # Initialize an empty list to store the result dictionaries
+        data = []
+
+        for symbol in watchlist['Asset']:
+            info = client.get_symbol_info(symbol)
+            info_dict = {
+                'symbol': info['symbol'],
+                'status': info['status'],
+                'ocoAllowed': info['ocoAllowed'],
+                'otoAllowed': info['otoAllowed'],
+                'allowTrailingStop': info['allowTrailingStop'],
+                'tickSize': next(f['tickSize'] for f in info['filters'] if f['filterType'] == 'PRICE_FILTER').find('1') - 1,
+                'stepSize': next(f['stepSize'] for f in info['filters'] if f['filterType'] == 'LOT_SIZE').find('1') - 1
+            }
+            data.append(info_dict)
+
+        info_df = pd.DataFrame(data, columns=['symbol', 'status', 'ocoAllowed', 'otoAllowed', 'allowTrailingStop', 'tickSize', 'stepSize'])
+        final_df = watchlist.merge(info_df, left_on='Asset', right_on='symbol')
+        final_df.drop(columns='symbol',inplace=True)
+    
+        return final_df #milgiorare per numero decimale corretto
