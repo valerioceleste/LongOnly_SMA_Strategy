@@ -22,6 +22,8 @@ class RiskManager:
         
         orderbook['Asset'] = watchlist['Asset']
         orderbook['Entry'] = watchlist['SMA']
+        orderbook['TickSize'] = watchlist['tickSize']
+        orderbook['StepSize'] = watchlist['stepSize']
         orderbook['SL'] = watchlist['SMA'] - watchlist['ATR'] * self.ATR_multiplier
         orderbook['Pct_Loss'] = (orderbook['SL'] / orderbook['Entry'] - 1).round(4)
         orderbook['Size'] = self.loss_per_trade / (orderbook['Entry'] - orderbook['SL'])
@@ -31,7 +33,7 @@ class RiskManager:
         orderbook['Budget_Size'] = orderbook['Budget'] / orderbook['Entry']
         orderbook['Budget_Loss'] = orderbook['Budget'] * orderbook['Pct_Loss']
         
-        print(f'\n\nTrade Sizing based on a Free capital of {self.free_capital} and a total of max {self.max_num_trades} trades ({self.trade_budget}) with a max loss of {self.pct_risk_per_trade*100}% ({self.loss_per_trade})\n')
+        print(f'\n\nTrade Sizing based on a Free capital of {self.free_capital} and a total of max {self.max_num_trades} trades ({self.trade_budget}) with a max loss of {self.pct_risk_per_trade*100}% ({self.loss_per_trade})per trade\n')
         return orderbook
 
 # verificare che il rischio sia prezzato sul budget del singolo trade non di ptf. questo dovrebbe funzionare su margine/futures, non spot

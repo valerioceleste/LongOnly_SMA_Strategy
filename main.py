@@ -5,19 +5,21 @@ from modules.risk_management import RiskManager
 
 ################################ INPUT ################################
 
-currency = 'EUR'
+currency = 'USDT'
 saving_rate = 0.1
 saving_threshold = 0.5
 
 interval = '1h'
-sma_window = 110
+sma_window = 50
 atr_window = 14
-loockback = 10
+loockback = 1
 filter = True
 
 pct_risk_per_trade = 0.02
-ATR_multiplier = 3
-max_num_trades = 1
+ATR_multiplier = 4
+max_num_trades = 4
+
+stablecoins = ['EURAEUR','ETHAEUR','AEURUSDT','EURUSDC','EURUSDT']
 
 #######################################################################
 
@@ -27,16 +29,17 @@ capital, free_capital, saving_capital, target_saving_capital = manager.get_capit
 saving_adjustment = manager.check_saving_capital()
 print(f'''
 Currency: {currency}
-Capital: {capital}
-Free Capital: {free_capital}
-Saving Capital: {saving_capital}
-Target Saving Capital: {target_saving_capital}
+Capital: {capital.round(2)}
+Free Capital: {free_capital.round(2)}
+Saving Capital: {saving_capital.round(2)}
+Target Saving Capital: {target_saving_capital.round(2)}
 ''')
 
 # HISTORICAL PRICE MODULE - Generate the Watchlist and calculate SMA and ATR
 wl = WatchlistGenerator()
 watchlist = wl.get_watchlist(currency, interval, sma_window, atr_window, loockback, filter)
 watchlist = wl.get_symbol_info(watchlist)
+watchlist = watchlist[~watchlist['Asset'].isin(stablecoins)]
 print(watchlist)
 
 # RISK MANAGEMENT MODULE - Generate the Trade sizing and SL according to defined risk
@@ -45,7 +48,6 @@ orderbook = rm.get_order_book()
 print(orderbook)
 
 # TRADE MANAGEMENT MODULE - Execute the trades using data in the orderbook
-
 tm = TradeManager()
-trades_confirmation = tm.place_orders(orderbook)
-print(trades_confirmation)
+results = tm.place_orders(orderbook)
+print(results)

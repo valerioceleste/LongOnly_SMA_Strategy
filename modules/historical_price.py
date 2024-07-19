@@ -63,10 +63,15 @@ class WatchlistGenerator:
         symbols = coins['symbol'].values
 
         interval_mapping = {
-            '1d': timedelta(days=span),
+            '5m': timedelta(minutes=span * 5),
+            '15m': timedelta(minutes=span * 15),
+            '30m': timedelta(minutes=span * 30),
             '1h': timedelta(hours=span),
-            '4h': timedelta(hours=span * 4)
+            '2h': timedelta(hours=span * 2),
+            '4h': timedelta(hours=span * 4),
+            '1d': timedelta(days=span)
         }
+
 
         #now = datetime.now(datetime.UTC)
         now = datetime.utcnow()
@@ -79,7 +84,7 @@ class WatchlistGenerator:
             data = [{'Asset': key,
                  'Close': historical_data[key]['Close'].iloc[-1],
                  'SMA': historical_data[key]['SMA'].iloc[-2],
-                 'ATR': (historical_data[key]['ATR'].iloc[-1], 7)}
+                 'ATR': historical_data[key]['ATR'].iloc[-1]}
                 for key in historical_data.keys()]
             
             df = pd.DataFrame(data, columns=['Asset', 'Close', 'SMA', 'ATR'])
@@ -89,7 +94,7 @@ class WatchlistGenerator:
             
             if filter:
                 watchlist = df.loc[df['Close'] < df[f'SMA({sma_window})']]
-                print(f'Watchlist filtered using a Lookback value of {lookback}')
+                print(f'Watchlist filtered using a Lookback value of {lookback}\n')
             else:
                 watchlist = df
                 
@@ -98,7 +103,7 @@ class WatchlistGenerator:
             data = [{'Asset': key,
                  'Close': historical_data[key]['Close'].iloc[-1],
                  'SMA': historical_data[key]['SMA'].iloc[-2],
-                 'ATR': round(historical_data[key]['ATR'].iloc[-1], 7),
+                 'ATR': historical_data[key]['ATR'].iloc[-1],
                  'Lookback_Close': historical_data[key]['Close'][-lookback:].max()}
                 for key in historical_data.keys()]
             
@@ -122,15 +127,19 @@ class WatchlistGenerator:
         data = []
 
         for symbol in watchlist['Asset']:
-            info = client.get_symbol_info(symbol)
+            info = self.client.get_symbol_info(symbol)
+
+            tick_size = next(f['tickSize'] for f in info['filters'] if f['filterType'] == 'PRICE_FILTER')
+            lot_size = next(f['stepSize'] for f in info['filters'] if f['filterType'] == 'LOT_SIZE')
+
             info_dict = {
                 'symbol': info['symbol'],
                 'status': info['status'],
                 'ocoAllowed': info['ocoAllowed'],
                 'otoAllowed': info['otoAllowed'],
                 'allowTrailingStop': info['allowTrailingStop'],
-                'tickSize': next(f['tickSize'] for f in info['filters'] if f['filterType'] == 'PRICE_FILTER').find('1') - 1,
-                'stepSize': next(f['stepSize'] for f in info['filters'] if f['filterType'] == 'LOT_SIZE').find('1') - 1
+                'tickSize': len(tick_size.split('.')[1].rstrip('0')) if '.' in tick_size else 0,
+                'stepSize': len(lot_size.split('.')[1].rstrip('0')) if '.' in lot_size else 0,
             }
             data.append(info_dict)
 
